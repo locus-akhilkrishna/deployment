@@ -3,12 +3,6 @@ description: 'Auto Approve PR for Code Owners and Blank commit'
 runs:
   using: 'composite'
   steps:
-    - uses: actions/checkout@v3
-      with:
-        clean: false
-        sparse-checkout: |
-          CODEOWNER.txt
-        sparse-checkout-cone-mode: false
     - shell: bash
       run: |
         echo "PR_ACTOR=false" >> $GITHUB_ENV
