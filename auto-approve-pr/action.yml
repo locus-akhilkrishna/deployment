@@ -1,0 +1,38 @@
+name: 'Auto Approve PR'
+description: 'Auto Approve PR for Code Owners and Blank commit'
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/checkout@v3
+      with:
+        clean: false
+        sparse-checkout: |
+          CODEOWNER.txt
+        sparse-checkout-cone-mode: false
+    - shell: bash
+      run: |
+        echo "PR_ACTOR=false" >> $GITHUB_ENV
+        if [ -f "CODEOWNER.txt" ]; then
+          cat CODEOWNER.txt | while read line
+          do
+              if [ $line = "${{ github.actor }}" ]; then echo "PR_ACTOR=true" >> $GITHUB_ENV; fi
+          done
+        fi
+    - name: Check number of lines inserted & deleted
+      run: |
+        git fetch
+        echo "CHANGE_LINES=`git diff --numstat origin/$HEAD_REF..origin/$BASE_REF --format="" "$@" | awk '{ins += $1}{del += $2} END{print ""ins+del""}'`" >> $GITHUB_ENV
+      shell: bash
+      env:
+        HEAD_REF: ${{github.head_ref}}
+        BASE_REF: ${{github.base_ref}}
+    # Approves the PR only if the PR author is in CODEOWNER list and code change should be less then 100 lines
+    - if: env.PR_ACTOR == 'true' && env.CHANGE_LINES < 100
+      uses: hmarr/auto-approve-action@v2
+      with:
+        github-token: ${{ github.token }}
+    # Approve the PR on blank commit
+    - uses: hmarr/auto-approve-action@v2
+      if: env.CHANGE_LINES == 0
+      with:
+        github-token: ${{ github.token }}
